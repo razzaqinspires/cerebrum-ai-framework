@@ -1,6 +1,6 @@
 {
   "name": "cerebrum-ai-framework",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A resilient and extensible framework for multiple LLM providers with streaming, tool-calling, and caching capabilities.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,7 +18,17 @@
     "type": "git",
     "url": "git+https://github.com/razzaqinspires/cerebrum.git"
   },
-  "keywords": [ "llm", "ai", "gateway", "framework", "agent", "openai", "gemini", "groq", "chatbot" ],
+  "keywords": [
+    "llm",
+    "ai",
+    "gateway",
+    "framework",
+    "agent",
+    "openai",
+    "gemini",
+    "groq",
+    "chatbot"
+  ],
   "author": "Arifi Razzaq <vr.zaq1@gmail.com>",
   "license": "ISC",
   "dependencies": {
