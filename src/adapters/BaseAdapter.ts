@@ -38,3 +38,19 @@ export interface CacheAdapter {
   set<T>(key: string, value: T, ttlSeconds: number): Promise<void>;
   del(key: string): Promise<void>;
 }
+
+export interface PerformanceRecord {
+  timestamp: string;
+  sessionId: string;
+  provider: string;
+  model: string;
+  latencyMs: number;
+  promptTokens: number;
+  completionTokens: number;
+  success: boolean;
+  errorType?: string;
+}
+
+export interface MetricsAdapter {
+  log(record: PerformanceRecord): Promise<void>;
+}

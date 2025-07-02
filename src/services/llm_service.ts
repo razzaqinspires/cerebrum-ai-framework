@@ -1,31 +1,44 @@
+/**
+ * @file src/services/llm_service.ts
+ * @description Bertanggung jawab untuk melakukan panggilan API langsung ke provider LLM.
+ * Melempar error spesifik saat terjadi kegagalan dan mendukung provider kustom.
+ */
 import axios from 'axios';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { Message } from '../adapters/BaseAdapter.js';
-import { ToolDefinition } from '../config/schema.js';
+import { ToolDefinition, ProviderConfig } from '../config/schema.js';
 import {
-  ContentExtractionError, InvalidApiKeyError, RateLimitError,
-  InsufficientQuotaError, ServiceUnavailableError,
+  ContentExtractionError,
+  InvalidApiKeyError,
+  RateLimitError,
+  InsufficientQuotaError,
+  ServiceUnavailableError,
 } from '../config/errors.js';
 
-type PayloadBuilder = (history: Message[], modelName: string, tools?: ToolDefinition[]) => object;
-type MessageExtractor = (responseData: any) => Message | null;
+// --- Helper Functions ---
 
-interface ProviderConfig {
-  getEndpoint: (modelName: string) => string;
-  buildPayload: PayloadBuilder;
-  extractMessage: MessageExtractor;
-}
+/**
+ * Mengubah riwayat percakapan ke format yang dimengerti oleh API Gemini.
+ */
+const toGeminiHistory = (history: Message[]): object[] => {
+    // Gemini tidak menggunakan system prompt dalam `contents`.
+    // Dan role asisten adalah 'model'.
+    return history
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(turn => ({
+            role: turn.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: turn.content }],
+        }));
+};
 
-const toGeminiHistory = (history: Message[]) => history.filter(m => m.role !== 'system').map(turn => ({
-  role: turn.role === 'assistant' ? 'model' : 'user',
-  parts: [{ text: turn.content }],
-}));
-
-const openAICompatiblePayload = (h: Message[], m: string, t?: ToolDefinition[]) => ({
-  model: m,
-  messages: h,
-  ...(t && t.length > 0 && {
-    tools: t.map(tool => ({
+/**
+ * Membangun payload untuk API yang kompatibel dengan OpenAI (OpenAI, Groq, Perplexity).
+ */
+const openAICompatiblePayload = (history: Message[], modelName: string, tools?: ToolDefinition[]): object => ({
+  model: modelName,
+  messages: history,
+  ...(tools && tools.length > 0 && {
+    tools: tools.map(tool => ({
       type: 'function',
       function: {
         name: tool.name,
@@ -36,7 +49,33 @@ const openAICompatiblePayload = (h: Message[], m: string, t?: ToolDefinition[]) 
   })
 });
 
-const providerConfigs: Record<string, ProviderConfig> = {
+/**
+ * Mengekstrak chunk dari Server-Sent Event (SSE) stream.
+ */
+function parseSseChunk(sseLine: string): string | null {
+  if (sseLine.startsWith('data: ')) {
+    const dataContent = sseLine.substring(6);
+    if (dataContent.trim() === '[DONE]') {
+      return null;
+    }
+    try {
+      const json = JSON.parse(dataContent);
+      return json.choices?.[0]?.delta?.content || '';
+    } catch (e) {
+      return '';
+    }
+  }
+  return '';
+}
+
+
+// --- Konfigurasi Provider Bawaan ---
+
+/**
+ * Objek ini berisi konfigurasi untuk provider yang didukung secara default oleh framework.
+ * Diekspor agar bisa digabungkan dengan `customProviders` di kelas Cerebrum.
+ */
+export const builtInProviderConfigs: Record<string, ProviderConfig> = {
   openai: {
     getEndpoint: () => 'https://api.openai.com/v1/chat/completions',
     buildPayload: openAICompatiblePayload,
@@ -47,91 +86,101 @@ const providerConfigs: Record<string, ProviderConfig> = {
     buildPayload: openAICompatiblePayload,
     extractMessage: (res) => res.data?.choices?.[0]?.message || null,
   },
-  // TAMBAHKAN BLOK INI
   perplexity: {
     getEndpoint: () => 'https://api.perplexity.ai/chat/completions',
     buildPayload: openAICompatiblePayload,
     extractMessage: (res) => res.data?.choices?.[0]?.message || null,
   },
-  // Tambahkan juga gemini jika Anda ingin menggunakannya
   gemini: {
-    getEndpoint: (m) => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,
-    buildPayload: (h) => ({ contents: toGeminiHistory(h.filter(m => m.role !== 'system')) }),
+    getEndpoint: (modelName) => `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
+    buildPayload: (history, modelName) => ({ contents: toGeminiHistory(history) }),
     extractMessage: (res) => ({ role: 'assistant', content: res.data?.candidates?.[0]?.content?.parts?.[0]?.text || '' }),
   },
 };
 
+
+// --- Fungsi Eksekusi API ---
+
+/**
+ * Menjalankan satu kali panggilan API (non-streaming) ke provider yang dipilih.
+ */
 async function generateNextMessage(
   history: Message[],
   provider: string,
   apiKey: string,
   modelName: string,
+  providerConfig: ProviderConfig,
   tools?: ToolDefinition[]
 ): Promise<Message> {
-  const config = providerConfigs[provider];
-  if (!config) throw new ServiceUnavailableError(`Provider '${provider}' tidak dikonfigurasi.`);
-  
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const url = config.getEndpoint(modelName);
-  headers['Authorization'] = `Bearer ${apiKey}`;
+  let url = providerConfig.getEndpoint(modelName);
+
+  if (provider === 'gemini') {
+      url = `${url}?key=${apiKey}`;
+  } else {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+  }
 
   try {
     const response = await axios({
-      method: 'POST', url, headers,
-      data: config.buildPayload(history, modelName, tools),
+      method: 'POST',
+      url,
+      headers,
+      data: providerConfig.buildPayload(history, modelName, tools),
       timeout: 60000,
     });
-    const message = config.extractMessage(response);
-    if (!message) throw new ContentExtractionError(`Gagal mengekstrak pesan dari provider ${provider}.`);
+    const message = providerConfig.extractMessage(response);
+    if (!message || (message.content === null && !message.tool_calls)) {
+      throw new ContentExtractionError(`Gagal mengekstrak konten atau tool_calls dari provider ${provider}.`);
+    }
     return message;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const errorInfo = error.response?.data?.error;
-      if (status === 401 || status === 403) throw new InvalidApiKeyError(`Kunci API ditolak oleh ${provider}.`);
-      if (status === 429) {
-        if (errorInfo?.type === 'insufficient_quota') throw new InsufficientQuotaError(`Kouta habis untuk provider ${provider}.`);
-        throw new RateLimitError(`Terkena rate limit dari ${provider}.`);
-      }
+        const status = error.response?.status;
+        const errorInfo = error.response?.data?.error;
+        if (status === 401 || status === 403) throw new InvalidApiKeyError(`Kunci API ditolak oleh ${provider}.`);
+        if (status === 429) {
+            if (errorInfo?.type === 'insufficient_quota') throw new InsufficientQuotaError(`Kouta habis untuk provider ${provider}.`);
+            throw new RateLimitError(`Terkena rate limit dari ${provider}.`);
+        }
+    }
+    if (error instanceof Error) {
+        throw new ServiceUnavailableError(`Layanan ${provider} gagal merespons: ${error.message}`);
     }
     throw new ServiceUnavailableError(`Layanan ${provider} tidak tersedia atau gagal merespons.`);
   }
 }
 
+/**
+ * Menjalankan panggilan API streaming ke provider yang dipilih.
+ */
 async function* generateStream(
     history: Message[],
     provider: string,
     apiKey: string,
     modelName: string,
+    providerConfig: ProviderConfig,
     tools?: ToolDefinition[]
 ): AsyncGenerator<string, void, unknown> {
-  const config = providerConfigs[provider];
-  if (!config) throw new ServiceUnavailableError(`Provider '${provider}' tidak dikonfigurasi.`);
   
   const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' };
-  const url = config.getEndpoint(modelName);
+  let url = providerConfig.getEndpoint(modelName);
   headers['Authorization'] = `Bearer ${apiKey}`;
   
   try {
     const response = await axios({
       method: 'POST', url, headers,
-      data: { ...config.buildPayload(history, modelName, tools), stream: true },
+      data: { ...providerConfig.buildPayload(history, modelName, tools), stream: true },
       responseType: 'stream',
+      timeout: 60000,
     });
     
     for await (const buffer of response.data) {
       const sseLines: string[] = buffer.toString('utf-8').split('\n').filter((line: string) => line.trim().length > 0);
       for (const sseLine of sseLines) {
-        if (sseLine.startsWith('data: ')) {
-          const dataContent = sseLine.substring(6);
-          if (dataContent.trim() === '[DONE]') continue;
-          try {
-            const json = JSON.parse(dataContent);
-            const chunk = json.choices?.[0]?.delta?.content || '';
-            if (chunk) yield chunk;
-          } catch (e) {
-             // Abaikan error parsing
-          }
+        const chunk = parseSseChunk(sseLine);
+        if (chunk) {
+          yield chunk;
         }
       }
     }

@@ -2,8 +2,15 @@
  * @file src/Cerebrum.ts
  * @description Kelas utama dari Framework Cerebrum.
  */
+
+// Impor dari Node.js
+import { createHash } from 'crypto';
+
+// Impor dari library eksternal
 import { createLogger, Logger } from './core/logger.js';
-import { configSchema, type CerebrumConfig } from './config/schema.js';
+
+// Impor dari internal framework
+import { configSchema, type CerebrumConfig, type ProviderConfig } from './config/schema.js';
 import { ConfigError, AllProvidersFailedError, CerebrumError } from './config/errors.js';
 import ApiStateAdapter from './adapters/ApiStateAdapter.js';
 import FileMemoryAdapter from './adapters/FileMemoryAdapter.js';
@@ -14,22 +21,28 @@ import responder from './services/responder.js';
 import { MemoryAdapter, ApiStatePersistenceAdapter, CacheAdapter, Message } from './adapters/BaseAdapter.js';
 import { Plugin, HookContext, ToolImplementation, CorePromptConfig, ChatOptions } from './types/index.js';
 import { countTokens } from './core/tokenizer.js';
-import { createHash } from 'crypto';
+import { builtInProviderConfigs } from './services/llm_service.js';
 
+// Tipe data untuk event yang dihasilkan oleh stream
 export interface ChatStreamEvent {
   type: 'chunk' | 'tool_call' | 'tool_result' | 'cached_response' | 'error';
   provider?: string;
   content: any;
 }
 
+/**
+ * Kelas utama dari Framework Cerebrum.
+ * Ini adalah titik masuk utama untuk berinteraksi dengan semua fitur AI.
+ */
 export class Cerebrum {
   public readonly config: CerebrumConfig;
-  private memoryAdapter: MemoryAdapter;
-  private apiStateAdapter: ApiStatePersistenceAdapter;
-  private cacheAdapter: CacheAdapter | null = null;
-  private toolImplementations: Record<string, ToolImplementation>;
-  private plugins: Plugin[];
-  private log: Logger;
+  private readonly allProviderConfigs: Record<string, ProviderConfig>;
+  private readonly memoryAdapter: MemoryAdapter;
+  private readonly apiStateAdapter: ApiStatePersistenceAdapter;
+  private readonly cacheAdapter: CacheAdapter | null = null;
+  private readonly toolImplementations: Record<string, ToolImplementation>;
+  private readonly plugins: Plugin[];
+  private readonly log: Logger;
   private corePrompt: string;
   private corePromptPassword?: string;
 
@@ -40,7 +53,7 @@ export class Cerebrum {
     corePromptConfig?: CorePromptConfig
   ) {
     this.log = createLogger('Cerebrum');
-    
+
     const validationResult = configSchema.safeParse(config);
     if (!validationResult.success) {
       const errorDetails = JSON.stringify(validationResult.error.flatten().fieldErrors, null, 2);
@@ -48,6 +61,14 @@ export class Cerebrum {
       throw new ConfigError(`Konfigurasi tidak valid: ${errorDetails}`);
     }
     this.config = validationResult.data;
+
+    this.allProviderConfigs = { ...builtInProviderConfigs, ...this.config.customProviders };
+
+    for (const p of this.config.providerStrategy) {
+      if (!this.allProviderConfigs[p]) {
+        throw new ConfigError(`Provider '${p}' di providerStrategy tidak punya definisi di provider bawaan maupun kustom.`);
+      }
+    }
 
     // @ts-ignore
     this.memoryAdapter = config.adapters?.memory || new FileMemoryAdapter();
@@ -69,34 +90,13 @@ export class Cerebrum {
     }
     this.toolImplementations = toolImplementations;
     this.plugins = plugins;
-    
+
     this.corePrompt = corePromptConfig?.content || 'You are a helpful AI assistant named Cerebrum.';
     this.corePromptPassword = corePromptConfig?.password;
-    this.log.info('Prompt Inti telah ditetapkan.');
-  }
-
-  public updateCorePrompt(newPrompt: string, password?: string): boolean {
-      if (this.corePromptPassword && password !== this.corePromptPassword) {
-          this.log.warn('Gagal mengubah prompt inti: password salah.');
-          return false;
-      }
-      this.corePrompt = newPrompt;
-      this.log.info('Prompt Inti berhasil diperbarui.');
-      return true;
-  }
-
-  private async _executePlugins(hookName: keyof Plugin, context: HookContext): Promise<void> {
-    for (const plugin of this.plugins) {
-      const hook = plugin[hookName];
-      // @ts-ignore
-      if (typeof hook === 'function') {
-        try {
-          // @ts-ignore
-          await hook.call(plugin, context);
-        } catch (error) {
-          this.log.error(`Error pada plugin '${plugin.name}' saat hook '${hookName}':`, error);
-        }
-      }
+    
+    this.log.info('Cerebrum diinisialisasi dengan konfigurasi yang valid.');
+    if (this.plugins.length > 0) {
+      this.log.info(`Plugin aktif: [${this.plugins.map(p => p.name).join(', ')}]`);
     }
   }
 
@@ -114,40 +114,18 @@ export class Cerebrum {
     this.log.info('Semua layanan latar belakang telah dihentikan.');
   }
 
-  private _pruneHistory(history: Message[]): Message[] {
-    const contextConfig = this.config.contextManagement;
-    if (!contextConfig) return history;
-
-    this.log.debug(`Menerapkan strategi manajemen konteks: ${contextConfig.strategy}`);
-    switch (contextConfig.strategy) {
-      case 'slidingWindow': {
-        const maxMessages = contextConfig.maxMessages;
-        if (history.length > maxMessages) {
-          const removedCount = history.length - maxMessages;
-          this.log.info(`Konteks dipangkas: ${removedCount} pesan lama dihapus (batas: ${maxMessages} pesan).`);
-          return history.slice(-maxMessages);
-        }
-        return history;
-      }
-      case 'tokenLimit': {
-        const maxTokens = contextConfig.maxTokens;
-        let currentTokens = 0;
-        const prunedHistory: Message[] = [];
-        for (let i = history.length - 1; i >= 0; i--) {
-          const message = history[i];
-          const tokens = countTokens(message.content);
-          if (currentTokens + tokens <= maxTokens) {
-            prunedHistory.unshift(message);
-            currentTokens += tokens;
-          } else {
-            this.log.info(`Konteks dipangkas: Batas token ${maxTokens} tercapai.`);
-            break;
-          }
-        }
-        return prunedHistory;
-      }
-      default: return history;
+  public updateCorePrompt(newPrompt: string, password?: string): boolean {
+    if (this.corePromptPassword && password !== this.corePromptPassword) {
+      this.log.warn('Gagal mengubah prompt inti: password salah.');
+      return false;
     }
+    this.corePrompt = newPrompt;
+    this.log.info('Prompt Inti berhasil diperbarui.');
+    return true;
+  }
+
+  public getMemoryAdapter(): MemoryAdapter {
+    return this.memoryAdapter;
   }
 
   public async *chatStream(sessionId: string, userInput: string, options: ChatOptions = {}): AsyncGenerator<ChatStreamEvent, void, unknown> {
@@ -186,7 +164,8 @@ export class Cerebrum {
         const finalHistory: Message[] = [{ role: 'system', content: finalSystemPrompt }, ...prunedHistory];
         
         await this._executePlugins('onPreRequest', { ...baseContext, history: finalHistory });
-        const { message, provider } = await responder.generateNextMessage(finalHistory, this.config, this.config.tools);
+        
+        const { message, provider } = await responder.generateNextMessage(finalHistory, this.config, this.allProviderConfigs, this.config.tools);
         finalProvider = provider;
 
         if (message.tool_calls && message.tool_calls.length > 0) {
@@ -200,7 +179,7 @@ export class Cerebrum {
           
           currentHistory.push(message, ...toolResults);
         } else {
-          for await (const chunk of responder.streamFinalResponse(finalHistory, message, provider, this.config)) {
+          for await (const chunk of responder.streamFinalResponse(finalHistory, message, provider, this.config, this.allProviderConfigs)) {
              fullResponse += chunk;
              yield { type: 'chunk', provider, content: chunk };
              await this._executePlugins('onResponseChunk', { ...baseContext, response: { chunk } });
@@ -234,7 +213,54 @@ export class Cerebrum {
     }
   }
 
-  public getMemoryAdapter(): MemoryAdapter {
-    return this.memoryAdapter;
+  private _pruneHistory(history: Message[]): Message[] {
+    const contextConfig = this.config.contextManagement;
+    if (!contextConfig) return history;
+
+    this.log.debug(`Menerapkan strategi manajemen konteks: ${contextConfig.strategy}`);
+    switch (contextConfig.strategy) {
+      case 'slidingWindow': {
+        const maxMessages = contextConfig.maxMessages;
+        if (history.length > maxMessages) {
+          const removedCount = history.length - maxMessages;
+          this.log.info(`Konteks dipangkas: ${removedCount} pesan lama dihapus (batas: ${maxMessages} pesan).`);
+          return history.slice(-maxMessages);
+        }
+        return history;
+      }
+      case 'tokenLimit': {
+        const maxTokens = contextConfig.maxTokens;
+        let currentTokens = 0;
+        const prunedHistory: Message[] = [];
+        for (let i = history.length - 1; i >= 0; i--) {
+          const message = history[i];
+          const tokens = countTokens(message.content);
+          if (currentTokens + tokens <= maxTokens) {
+            prunedHistory.unshift(message);
+            currentTokens += tokens;
+          } else {
+            this.log.info(`Konteks dipangkas: Batas token ${maxTokens} tercapai.`);
+            break;
+          }
+        }
+        return prunedHistory;
+      }
+      default: return history;
+    }
+  }
+
+  private async _executePlugins(hookName: keyof Plugin, context: HookContext): Promise<void> {
+    for (const plugin of this.plugins) {
+      const hook = plugin[hookName];
+      // @ts-ignore
+      if (typeof hook === 'function') {
+        try {
+          // @ts-ignore
+          await hook.call(plugin, context);
+        } catch (error) {
+          this.log.error(`Error pada plugin '${plugin.name}' saat hook '${hookName}':`, error);
+        }
+      }
+    }
   }
 }

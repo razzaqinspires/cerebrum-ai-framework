@@ -8,36 +8,61 @@
 
 Framework ini mengubah interaksi API yang kompleks menjadi sebuah pengalaman yang mulus, memungkinkan developer untuk fokus membangun aplikasi AI yang cerdas, bukan mengelola infrastruktur yang rapuh.
 
+---
+
+## 🆕 Status & Roadmap Proyek
+
+Tabel ini menunjukkan status implementasi dari fitur-fitur utama Cerebrum.
+
+| Fitur | Status | Versi Tersedia |
+| :--- | :--- | :--- |
+| **Multi-Provider & Fallback Cerdas** | ✅ Selesai | `v1.0.0` |
+| **Rotasi Kunci API Otomatis** | ✅ Selesai | `v1.0.0` |
+| **Manajemen Konteks Otomatis** | ✅ Selesai | `v1.1.0` |
+| **Streaming Respons Real-time** | ✅ Selesai | `v1.1.0` |
+| **Dukungan Tools (Function Calling)** | ✅ Selesai | `v1.2.0` |
+| **Caching Respons Cerdas** | ✅ Selesai | `v1.2.0` |
+| **Sistem Plugin/Middleware** | ✅ Selesai | `v1.2.0` |
+| **Provider Kustom oleh Pengguna** | ✅ Selesai | `v1.2.0` |
+| **Dukungan Modul Ganda (ESM & CJS)** | ✅ Selesai | `v1.1.0` |
+| **Logger & Error Handling Canggih** | ✅ Selesai | `v1.1.0` |
+| **Self-Healing Fallback (AI Scraper)** | ⏳ Direncanakan | `v2.0.0` |
+
+### Roadmap Masa Depan (Eksperimental)
+
+* **⏳ Self-Healing Fallback:** Sebuah fitur ambisius di mana Cerebrum memiliki asisten AI internal yang dapat secara proaktif mencari provider AI gratis baru, menulis konfigurasinya sendiri, dan menggunakannya sebagai fallback terakhir jika semua provider utama gagal.
+* **⏳ Komponen Logika Dinamis:** Kemampuan AI untuk membuat "tool" sederhana secara dinamis untuk tugas-tugas spesifik seperti perhitungan matematika atau pemformatan tanggal.
+
+---
+
 ## ✨ Fitur Utama
 
-* **🧠 Multi-Provider & Fallback Cerdas:** Secara otomatis beralih ke provider AI berikutnya (misalnya dari Gemini ke Groq) jika terjadi kegagalan, rate limit, atau kunci API habis.
+* **🧠 Multi-Provider & Fallback Cerdas:** Secara otomatis beralih ke provider AI berikutnya jika terjadi kegagalan, rate limit, atau kunci API habis.
 * **⚡ Streaming Real-time:** Dapatkan respons dari AI kata per kata, memberikan pengalaman pengguna yang sangat responsif seperti pada aplikasi chat modern.
-* **🛠️ Dukungan Tools (Function Calling):** Beri AI Anda kemampuan untuk "bertindak"—menjalankan fungsi kustom Anda untuk mengambil data dari API eksternal, database, atau sistem lainnya.
+* **🛠️ Dukungan Tools (Function Calling):** Beri AI Anda kemampuan untuk "bertindak"—menjalankan fungsi kustom Anda untuk berinteraksi dengan API eksternal atau database.
 * **📚 Manajemen Konteks Otomatis:** Secara cerdas memangkas riwayat percakapan yang panjang untuk menghindari error batas token dan mengoptimalkan biaya API.
-* **💽 Caching Cerdas:** Secara otomatis menyimpan respons untuk permintaan yang sama, mengurangi latensi dan menghemat biaya secara drastis.
-* **🔌 Arsitektur Pluggable:** Ganti komponen inti seperti sistem memori atau caching dengan implementasi Anda sendiri (misalnya, Redis, MongoDB) menggunakan pola Adapter yang bersih.
-* **⚙️ Sistem Plugin & Middleware:** "Suntikkan" logika kustom Anda sendiri ke dalam siklus hidup permintaan/respons untuk keperluan logging, analitik, moderasi, dan lainnya.
+* **💽 Caching Cerdas:** Secara otomatis menyimpan respons untuk permintaan yang sama, mengurangi latensi dan menghemat biaya.
+* **🔌 Arsitektur Pluggable:** Ganti komponen inti (memori, caching) dan tambahkan provider AI kustom Anda sendiri dengan mudah.
+* **⚙️ Sistem Plugin & Middleware:** "Suntikkan" logika kustom pada berbagai tahap siklus hidup permintaan untuk analitik, moderasi, dll.
 * **📦 Dukungan Modul Ganda:** Bekerja secara *out-of-the-box* baik dengan proyek **ES Modules (`import`)** maupun **CommonJS (`require`)**.
 
 ## Diagram Alur Kerja (Algoritma)
 
-Berikut adalah gambaran tingkat tinggi tentang bagaimana Cerebrum memproses sebuah permintaan, menunjukkan kecerdasan di balik layar.
-
 ```mermaid
 graph TD
-    A[Pengguna Mengirim Input] --> B{Cerebrum.chatStream()};
+    A[Input Pengguna] --> B{Cerebrum.chatStream()};
     B --> C{Cache Check};
-    C -- CACHE HIT --> D[Stream Respons dari Cache];
-    C -- CACHE MISS --> E[Responder Mulai Bekerja];
-    E --> F{Provider #1 (misal: Gemini)};
-    F -- Gagal/Limit --> G{Provider #2 (misal: Groq)};
-    F -- Sukses --> H[Panggil API LLM];
+    C -- CACHE HIT --> D[Stream dari Cache];
+    C -- CACHE MISS --> E[Responder];
+    E --> F{Provider #1};
+    F -- Gagal --> G{Provider #2};
+    F -- Sukses --> H[API LLM];
     G -- Sukses --> H;
-    H --> I{AI Perlu Tool?};
-    I -- YA --> J[Jalankan Fungsi Lokal];
-    J --> K[Kirim Hasil Tool ke AI];
+    H --> I{Perlu Tool?};
+    I -- YA --> J[Jalankan Tool Lokal];
+    J --> K[Kirim Hasil ke AI];
     K --> H;
-    I -- TIDAK --> L[Stream Respons Teks dari AI];
+    I -- TIDAK --> L[Stream Teks dari AI];
     L --> M{Simpan ke Cache & Memori};
     D --> Z[Selesai];
     M --> Z;
@@ -60,33 +85,20 @@ Gunakan ini di proyek TypeScript atau proyek JavaScript dengan `"type": "module"
 // index.ts atau index.mjs
 import { Cerebrum } from 'cerebrum-ai-framework';
 
-// 1. Definisikan konfigurasi Anda
-const appConfig = {
-    apiKeys: { 
-        groq: ["gsk_..."], // Ganti dengan kunci API Anda
-    },
+const config = {
+    apiKeys: { groq: ["gsk_..."] }, // Ganti dengan kunci API Anda
     providerStrategy: ['groq'],
-    modelDefaults: { 
-        groq: 'llama3-8b-8192',
-    },
+    modelDefaults: { groq: 'llama3-8b-8192' },
 };
 
 async function main() {
-    // 2. Inisialisasi Cerebrum
-    const cerebrum = new Cerebrum(appConfig);
+    const cerebrum = new Cerebrum(config);
     await cerebrum.bootstrap();
 
-    // 3. Mulai percakapan!
-    const sessionId = 'quick-start-123';
-    const prompt = "Halo, dunia!";
-
-    console.log(`Anda: ${prompt}`);
+    console.log('Anda: Halo!');
     process.stdout.write('AI: ');
-
-    for await (const event of cerebrum.chatStream(sessionId, prompt)) {
-        if (event.type === 'chunk') {
-            process.stdout.write(event.content);
-        }
+    for await (const event of cerebrum.chatStream('sesi-1', 'Halo!')) {
+        if (event.type === 'chunk') process.stdout.write(event.content);
     }
     console.log();
     cerebrum.shutdown();
@@ -102,34 +114,21 @@ Gunakan ini di proyek Node.js tradisional (tanpa `"type": "module"`).
 // index.js
 const { Cerebrum } = require('cerebrum-ai-framework');
 
-// 1. Definisikan konfigurasi Anda
-const appConfig = {
-    apiKeys: { 
-        groq: ["gsk_..."], // Ganti dengan kunci API Anda
-    },
+const config = {
+    apiKeys: { groq: ["gsk_..."] }, // Ganti dengan kunci API Anda
     providerStrategy: ['groq'],
-    modelDefaults: { 
-        groq: 'llama3-8b-8192',
-    },
+    modelDefaults: { groq: 'llama3-8b-8192' },
 };
 
 // Gunakan IIFE (Immediately Invoked Function Expression) untuk top-level await
 (async () => {
-    // 2. Inisialisasi Cerebrum
-    const cerebrum = new Cerebrum(appConfig);
+    const cerebrum = new Cerebrum(config);
     await cerebrum.bootstrap();
 
-    // 3. Mulai percakapan!
-    const sessionId = 'quick-start-456';
-    const prompt = "Apa itu CommonJS?";
-
-    console.log(`Anda: ${prompt}`);
+    console.log('Anda: Halo!');
     process.stdout.write('AI: ');
-
-    for await (const event of cerebrum.chatStream(sessionId, prompt)) {
-        if (event.type === 'chunk') {
-            process.stdout.write(event.content);
-        }
+    for await (const event of cerebrum.chatStream('sesi-2', 'Halo!')) {
+        if (event.type === 'chunk') process.stdout.write(event.content);
     }
     console.log();
     cerebrum.shutdown();
@@ -141,64 +140,66 @@ const appConfig = {
 ## ⚙️ Konfigurasi Lengkap (`CerebrumConfig`)
 Ini adalah objek utama yang Anda berikan ke `Cerebrum` untuk mengatur segalanya.
 
-* `apiKeys: Record<string, string[]>`: Objek berisi kunci API Anda. *Key* adalah nama provider (misal: `"groq"`), dan *value* adalah array berisi satu atau lebih string kunci API.
-* `providerStrategy: string[]`: Array berisi nama-nama provider, menentukan urutan prioritas fallback. Contoh: `['gemini', 'groq', 'openai']`.
-* `modelDefaults: Record<string, string>`: Memetakan nama provider ke model default yang akan digunakan. Contoh: `{ groq: 'llama3-70b-8192' }`.
-* `prompting?: { systemPrompt?: string }`: *(Opsional)* Tempat untuk mendefinisikan `systemPrompt` default untuk semua permintaan.
-* `contextManagement?: { strategy, ... }`: *(Opsional)* Mengatur cara framework memangkas riwayat percakapan.
-    * `strategy: 'slidingWindow', maxMessages: number`: Hanya menyimpan N pesan terakhir. Cepat dan sederhana.
-    * `strategy: 'tokenLimit', maxTokens: number`: Memastikan total token riwayat tidak melebihi batas. Lebih presisi untuk kontrol biaya.
-* `caching?: { enabled: boolean, ttl: number }`: *(Opsional)* Mengaktifkan caching. `ttl` adalah masa berlaku cache dalam detik.
-* `tools?: ToolDefinition[]`: *(Opsional)* Array berisi definisi dari semua *tools* yang bisa digunakan oleh AI.
+* `apiKeys: Record<string, string[]>`: Objek berisi kunci API Anda. *Key* adalah nama provider (misal: `"groq"`), dan *value* adalah array berisi satu atau lebih string kunci API untuk rotasi otomatis.
+* `providerStrategy: string[]`: Array yang menentukan urutan prioritas provider fallback.
+* `modelDefaults: Record<string, string>`: Memetakan provider ke nama model default yang akan digunakan.
+* `customProviders?: Record<string, ProviderConfig>`: *(Opsional)* Daftarkan provider AI kustom Anda di sini.
+* `prompting?: { systemPrompt?: string }`: *(Opsional)* Definisikan `systemPrompt` default untuk semua permintaan.
+* `contextManagement?: { strategy, ... }`: *(Opsional)* Atur cara framework memangkas riwayat percakapan (`slidingWindow` atau `tokenLimit`).
+* `caching?: { enabled: boolean, ttl: number }`: *(Opsional)* Aktifkan caching respons. `ttl` dalam detik.
+* `tools?: ToolDefinition[]`: *(Opsional)* Definisikan *tools* yang bisa digunakan oleh AI.
+
+---
+
+## ✨ Menambahkan Provider Kustom (Fitur Lanjutan)
+
+Anda tidak terbatas pada provider bawaan. Daftarkan provider AI apa pun dengan 3 langkah: **Define, Register, Prioritize.**
+
+### Contoh: Membuat dan Menggunakan "EchoAI"
+
+#### 1. Define (Definisikan Logika Provider)
+Di file konfigurasi Anda, buat sebuah objek yang sesuai dengan interface `ProviderConfig`.
+
+```typescript
+import { ProviderConfig, Message } from 'cerebrum-ai-framework';
+
+const echoAIProvider: ProviderConfig = {
+    getEndpoint: () => "local://echo",
+    buildPayload: (history, modelName) => ({ history, modelName }),
+    extractMessage: (requestPayload: { data: { history: Message[] } }) => {
+        const lastUserMessage = requestPayload.data.history.filter(m => m.role === 'user').pop();
+        return {
+            role: 'assistant',
+            content: `AI Gema merespons: "${lastUserMessage?.content}"`
+        };
+    }
+};
+```
+
+#### 2. Register & 3. Prioritize
+Masukkan definisi dan nama provider kustom Anda ke dalam konfigurasi utama.
+
+```typescript
+const appConfig = {
+    apiKeys: { groq: ["gsk_..."] }, // EchoAI tidak perlu kunci
+    providerStrategy: ['EchoAI', 'groq'], // Jadikan EchoAI prioritas utama!
+    modelDefaults: { 
+        groq: 'llama3-8b-8192',
+        EchoAI: 'echo-v1',
+    },
+    customProviders: {
+        EchoAI: echoAIProvider, // Daftarkan di sini
+    }
+};
+```
 
 ---
 
 ## 💡 Pola Penggunaan & Skenario Lanjutan
-Cerebrum dirancang untuk fleksibel. Berikut adalah beberapa pola dan saran untuk kasus penggunaan yang berbeda.
 
-### Skenario 1: Chatbot Layanan Pelanggan
-* **Kebutuhan:** Bot harus mengingat percakapan panjang dan bisa mengambil data spesifik (misal: status pesanan).
-* **Solusi Cerebrum:** Fokus pada `contextManagement` dan `tools`.
-
-**Konfigurasi yang Direkomendasikan:**
-Gunakan strategi `tokenLimit` untuk mengelola riwayat tiket support yang panjang, dan daftarkan `tool` untuk mengambil data pesanan.
-
-```typescript
-import { z } from 'zod';
-
-const appConfig = {
-    contextManagement: {
-        strategy: 'tokenLimit',
-        maxTokens: 10000, 
-    },
-    tools: [{
-        name: 'getOrderStatus',
-        description: 'Mendapatkan status pesanan pelanggan berdasarkan ID pesanan.',
-        parameters: z.object({ orderId: z.string() }),
-    }]
-};
-```
-
-### Skenario 2: Generator Konten/Artikel
-* **Kebutuhan:** Alat internal untuk membuat draf artikel. Seringkali, permintaan yang sama diulang. Biaya API harus ditekan.
-* **Solusi Cerebrum:** Fokus pada `caching` dan `prompting` dinamis.
-
-**Konfigurasi dan Penggunaan:**
-Aktifkan `caching` dengan TTL yang lama. Gunakan `options.systemPrompt` saat memanggil `.chatStream()` untuk memberikan instruksi spesifik.
-
-```typescript
-const appConfig = {
-    caching: { enabled: true, ttl: 3600 }, // Cache 1 jam
-};
-
-async function generateArticle(topic: string) {
-    const prompt = `Buat draf artikel 500 kata tentang: ${topic}`;
-    const options = {
-        systemPrompt: "Anda adalah penulis konten SEO profesional."
-    };
-    for await (const event of cerebrum.chatStream('content-gen', prompt, options)) { /* ... */ }
-}
-```
+* **Chatbot Layanan Pelanggan:** Gunakan `contextManagement: { strategy: 'tokenLimit' }` untuk mengelola tiket support yang panjang dan `tools` untuk mengambil data pesanan.
+* **Generator Konten:** Aktifkan `caching: { enabled: true, ttl: 3600 }` untuk menghemat biaya pada topik yang sering diminta. Gunakan `options.systemPrompt` untuk mengarahkan gaya penulisan AI per artikel.
+* **Bot Interaktif Real-time (Discord/Telegram):** Manfaatkan penuh loop `for await...of` pada `cerebrum.chatStream()` dan event `chunk` untuk menciptakan ilusi AI sedang "mengetik" dengan mengedit pesan secara bertahap.
 
 ---
 
@@ -209,17 +210,9 @@ Bagian ini untuk developer yang ingin memahami arsitektur Cerebrum lebih dalam.
 ### `Cerebrum` (Kelas Utama)
 Titik masuk utama dari framework.
 
-* **`new Cerebrum(config, toolImplementations, plugins, corePromptConfig)`**
-    * `config: CerebrumConfig`: **(Wajib)** Objek konfigurasi utama.
-    * `toolImplementations?`: *(Opsional)* Fungsi asli untuk setiap `tool` yang didefinisikan.
-    * `plugins?`: *(Opsional)* Array berisi plugin yang ingin diaktifkan.
-    * `corePromptConfig?`: *(Opsional)* Konfigurasi untuk "Prompt Inti" AI, termasuk password.
-
-* **`.bootstrap(): Promise<void>`**
-    Wajib dipanggil sekali untuk memuat state dan menjalankan layanan latar belakang.
-
-* **`.chatStream(sessionId, userInput, options): AsyncGenerator<ChatStreamEvent>`**
-    Metode utama untuk memulai percakapan, mengembalikan *Async Generator* yang bisa di-loop untuk menerima event secara real-time.
+* **`new Cerebrum(config, toolImplementations?, plugins?, corePromptConfig?)`**: Konstruktor untuk membuat instance baru dengan konfigurasi eksplisit.
+* **`.bootstrap(): Promise<void>`**: Wajib dipanggil sekali untuk memuat state dan menjalankan layanan latar belakang.
+* **`.chatStream(sessionId, userInput, options?): AsyncGenerator<ChatStreamEvent>`**: Metode utama untuk memulai percakapan, mengembalikan *Async Generator* yang bisa di-loop untuk menerima event (`chunk`, `tool_call`, dll) secara real-time.
 
 ### Tipe & Interface yang Dapat Diimpor
 Gunakan tipe-tipe ini untuk memastikan kode Anda *type-safe*.
@@ -238,11 +231,13 @@ import { Cerebrum, AllProvidersFailedError, ConfigError } from 'cerebrum-ai-fram
 
 try {
     const cerebrum = new Cerebrum(...);
+    await cerebrum.chatStream(...);
 } catch (error) {
     if (error instanceof ConfigError) {
         console.error("Konfigurasi salah:", error.message);
     } else if (error instanceof AllProvidersFailedError) {
         console.error("Layanan AI sedang sibuk, coba lagi nanti.");
+        console.log("Penyebab terakhir:", error.lastError);
     }
 }
 ```
