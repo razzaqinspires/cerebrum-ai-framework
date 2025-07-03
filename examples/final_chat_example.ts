@@ -1,23 +1,17 @@
 /**
  * @file examples/final_chat_example.ts
- * @description Contoh final dan terlengkap penggunaan Cerebrum
- * dengan memuat konfigurasi dari file terpusat.
+ * @description Contoh penggunaan Cerebrum dengan toolChoice dan tampilan terminal yang stabil.
  */
-
-// Impor dari library pihak ketiga dan Node.js
 import readline from 'readline';
 import chalk from 'chalk';
-
-// Impor semua yang dibutuhkan dari framework Anda
 import { 
     Cerebrum, 
     CerebrumError, 
     ConfigError, 
     AllProvidersFailedError,
-    ChatStreamEvent
+    ChatStreamEvent,
+    ChatOptions
 } from '../src/index.js';
-
-// Impor SEMUA yang dibutuhkan dari file konfigurasi terpusat Anda
 import { appConfig, myToolImplementations, myPlugins, corePrompt } from './app-config.js';
 
 const log = (label: string, message: string, color = chalk.white) => {
@@ -27,19 +21,14 @@ const log = (label: string, message: string, color = chalk.white) => {
 
 async function main() {
   try {
-    // 1. Inisialisasi Cerebrum dengan mengimpor semua konfigurasi.
-    // Perhatikan betapa bersihnya bagian ini.
     const cerebrum = new Cerebrum(appConfig, myToolImplementations, myPlugins, corePrompt);
-    
-    // 2. Jalankan proses bootstrap
     await cerebrum.bootstrap();
 
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     const sessionId = `final-session-${Date.now()}`;
     console.log(chalk.bold.magenta(`\nSelamat Datang di Cerebrum! Sesi: ${sessionId}`));
-    console.log(chalk.gray('Contoh: "cek status pesanan ORD-12345" atau "exit" untuk keluar.\n'));
+    console.log(chalk.gray('Contoh: "cek status pesanan ORD-12345", "siapa kamu?", atau "exit" untuk keluar.\n'));
 
-    // 3. Mulai loop percakapan interaktif
     const chatLoop = async () => {
       const userInput = await new Promise<string>(res => rl.question(chalk.greenBright('Anda: '), res));
       if (userInput.toLowerCase() === 'exit') {
@@ -53,38 +42,52 @@ async function main() {
         
         let fullResponse = '';
         let finalProvider = 'N/A';
-        
-        // 4. Gunakan .chatStream dan proses setiap event yang diterima
-        for await (const event of cerebrum.chatStream(sessionId, userInput)) {
+        let isFirstChunk = true;
+
+        // --- LOGIKA CERDAS UNTUK TOOL CHOICE ---
+        // Jika input mengandung kata kunci seperti 'status' atau 'pesanan',
+        // biarkan AI bebas memilih tool. Jika tidak, paksa untuk menjawab dengan teks.
+        const chatOptions: ChatOptions = {
+            toolChoice: userInput.toLowerCase().includes('status') || userInput.toLowerCase().includes('pesanan')
+                ? 'auto'
+                : 'none'
+        };
+        log('APP', `Tool Choice diatur ke: '${chatOptions.toolChoice}'`, chalk.blue);
+
+        for await (const event of cerebrum.chatStream(sessionId, userInput, chatOptions)) {
           finalProvider = event.provider || finalProvider;
+          
+          // Cetak "AI:" hanya sekali saat data pertama diterima
+          if (isFirstChunk) {
+            process.stdout.write(chalk.cyanBright('AI: '));
+            isFirstChunk = false;
+          }
+
           switch (event.type) {
             case 'chunk':
-              if (fullResponse.length === 0) process.stdout.write(chalk.cyanBright('AI: '));
               process.stdout.write(chalk.cyanBright(event.content));
               fullResponse += event.content;
               break;
             case 'cached_response':
-              process.stdout.write(chalk.cyanBright('AI: '));
               process.stdout.write(chalk.cyanBright.italic(event.content));
               fullResponse += event.content;
               break;
             case 'tool_call':
-              console.log(chalk.yellow(`\n[Memanggil tool: ${event.content[0].function.name}...]`));
+              process.stdout.write(chalk.yellow(`[Memanggil tool: ${event.content[0].function.name}...]\n`));
               break;
             case 'tool_result':
-              console.log(chalk.yellow(`[Hasil tool diterima, melanjutkan proses...]`));
+              log('APP', `[Hasil tool diterima, melanjutkan proses...]`, chalk.yellow);
               process.stdout.write(chalk.cyanBright('AI: '));
               break;
           }
         }
         
-        // Pindah baris hanya jika ada output teks
         if (fullResponse) {
             process.stdout.write('\n');
         }
 
       } catch (error) {
-        console.log(); // Pindah baris jika ada error
+        console.log();
         if (error instanceof AllProvidersFailedError) log('APP', `Gagal: ${error.message}`, chalk.red);
         else log('APP', `Error tak terduga: ${(error as Error).message}`, chalk.red);
       }
@@ -94,7 +97,6 @@ async function main() {
     };
     
     chatLoop();
-
   } catch (error) {
     if (error instanceof ConfigError) log('FATAL', `Config Error: ${error.message}`, chalk.red.bold);
     else log('FATAL', `Startup Error: ${(error as Error).message}`, chalk.red.bold);

@@ -1,37 +1,24 @@
 /**
  * @file src/services/responder.ts
- * @description Orkestrator utama yang mengelola logika fallback, rotasi kunci, dan eksekusi tool.
+ * @description Orkestrator utama yang mengelola logika fallback, rotasi kunci, retry, dan eksekusi tool.
  */
 import llmService from './llm_service.js';
 import apiManager from '../core/api_manager.js';
 import { createLogger } from '../core/logger.js';
 import { Message } from '../adapters/BaseAdapter.js';
 import { CerebrumConfig, ToolDefinition, ProviderConfig } from '../config/schema.js';
-import { 
-    AllProvidersFailedError, 
-    InvalidApiKeyError, 
-    InsufficientQuotaError, 
-    RateLimitError, 
-    ServiceUnavailableError 
-} from '../config/errors.js';
-import { ToolImplementation } from '../types/index.js';
+import { AllProvidersFailedError, InvalidApiKeyError, InsufficientQuotaError, RateLimitError, ServiceUnavailableError } from '../config/errors.js';
+import { ToolImplementation, ChatOptions } from '../types/index.js';
 
 const log = createLogger('Responder');
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * Mencoba mendapatkan pesan balasan dari AI dengan menjalankan strategi fallback.
- * @param history Riwayat percakapan yang akan dikirim.
- * @param config Konfigurasi instance Cerebrum.
- * @param allProviderConfigs Peta lengkap dari semua provider yang tersedia (bawaan + kustom).
- * @param tools Definisi tools yang tersedia.
- * @returns Objek berisi pesan balasan dari AI dan provider yang berhasil merespons.
- * @throws {AllProvidersFailedError} Jika semua provider dalam strategi gagal.
- */
 async function generateNextMessage(
   history: Message[],
   config: CerebrumConfig,
   allProviderConfigs: Record<string, ProviderConfig>,
-  tools?: ToolDefinition[]
+  tools?: ToolDefinition[],
+  toolChoice?: ChatOptions['toolChoice']
 ): Promise<{ message: Message; provider: string }> {
   const providerPriority = apiManager.getState().providerPriority;
   const excludedKeysThisRequest = new Set<string>();
@@ -48,47 +35,48 @@ async function generateNextMessage(
     
     while (true) {
       const apiKey = apiManager.getNextAvailableKey(provider, excludedKeysThisRequest);
-      if (!apiKey && provider !== 'EchoAI') { // EchoAI tidak butuh kunci
+      if (!apiKey && providerConfig.getEndpoint().startsWith('http')) {
         log.warn(`Tidak ada lagi kunci AKTIF untuk ${provider}.`);
         break; 
       }
 
-      try {
-        log.info(`Mencoba provider ${provider.toUpperCase()} dengan kunci ...${apiKey ? apiKey.slice(-4) : 'NONE'}`);
-        const message = await llmService.generateNextMessage(history, provider, apiKey!, modelName, providerConfig, tools);
-        log.info(`Sukses mendapatkan pesan dari ${provider.toUpperCase()}`);
-        return { message, provider };
-      } catch (error) {
-        lastError = error as Error;
-        log.warn(`Kunci ...${apiKey ? apiKey.slice(-4) : 'NONE'} gagal: ${lastError.name} - ${lastError.message}`);
-        
-        if (apiKey) {
+      const MAX_RETRIES = 3;
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          log.info(`Mencoba provider ${provider.toUpperCase()} dengan kunci ...${apiKey ? apiKey.slice(-4) : 'NONE'} (Percobaan ${attempt}/${MAX_RETRIES})`);
+          
+          const message = await llmService.generateNextMessage(history, provider, apiKey!, modelName, providerConfig, tools, toolChoice);
+          
+          log.info(`Sukses mendapatkan pesan dari ${provider.toUpperCase()}`);
+          await apiManager.setHighestPriority(provider);
+          return { message, provider };
+
+        } catch (error) {
+          lastError = error as Error;
+          
+          if (error instanceof ServiceUnavailableError && attempt < MAX_RETRIES) {
+              const delay = 500 * attempt;
+              log.warn(`Layanan ${provider} gagal. Mencoba lagi dalam ${delay}ms...`);
+              await sleep(delay);
+              continue;
+          }
+          
+          log.warn(`Kunci ...${apiKey ? apiKey.slice(-4) : 'NONE'} gagal total: ${lastError.name} - ${lastError.message}`);
+          if (apiKey) {
             excludedKeysThisRequest.add(apiKey);
             if (error instanceof InvalidApiKeyError) await apiManager.updateKeyStatus(apiKey, 'invalid');
             else if (error instanceof InsufficientQuotaError) await apiManager.updateKeyStatus(apiKey, 'quota_exhausted');
             else if (error instanceof RateLimitError) await apiManager.updateKeyStatus(apiKey, 'rate_limited');
-            else {
-                // Untuk error seperti ServiceUnavailable, kita anggap provider-nya yang bermasalah, bukan kuncinya.
-                break; // Keluar dari loop kunci dan coba provider berikutnya.
-            }
-        } else {
-            // Jika provider tanpa kunci gagal, langsung coba provider berikutnya.
-            break;
+          }
+          break;
         }
       }
     }
     await apiManager.demoteProvider(provider);
   }
-
   throw new AllProvidersFailedError('Semua provider gagal merespons setelah mencoba semua strategi fallback.', lastError);
 }
 
-/**
- * Mengeksekusi tool yang diminta oleh AI.
- * @param toolCalls Array berisi permintaan tool call dari AI.
- * @param implementations Peta berisi fungsi-fungsi implementasi tool.
- * @returns Array berisi pesan hasil eksekusi tool.
- */
 async function executeTools(
   toolCalls: any[],
   implementations: Record<string, ToolImplementation>
@@ -100,7 +88,7 @@ async function executeTools(
     const implementation = implementations[functionName];
     let result;
 
-    log.info(`Mengeksekusi tool: ${functionName} dengan argumen:`, functionArgs);
+    log.info(`Mengeksekusi tool: ${functionName}`, functionArgs);
     if (implementation) {
       try {
         result = await Promise.resolve(implementation(functionArgs));
@@ -122,27 +110,13 @@ async function executeTools(
   return results;
 }
 
-/**
- * Men-stream respons teks final setelah semua proses (termasuk tool calls) selesai.
- */
 async function* streamFinalResponse(
-  history: Message[],
   messageWithContent: Message,
-  provider: string,
-  config: CerebrumConfig,
-  allProviderConfigs: Record<string, ProviderConfig>,
 ): AsyncGenerator<string, void, unknown> {
-    const providerConfig = allProviderConfigs[provider];
-    if (!providerConfig) return;
-
-    // Untuk provider sejati, kita bisa memanggil llm_service.generateStream di sini.
-    // Untuk kesederhanaan dan efisiensi (menghindari panggilan API kedua),
-    // kita simulasikan stream dari konten yang sudah ada.
     if(messageWithContent.content) {
         const words = messageWithContent.content.split(' ');
         for(let i=0; i<words.length; i++) {
             yield words[i] + (i === words.length-1 ? '' : ' ');
-            // Jeda kecil untuk membuat efek "mengetik"
             await new Promise(res => setTimeout(res, 30));
         }
     }

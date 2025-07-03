@@ -5,24 +5,16 @@
 import { CerebrumConfig } from '../config/schema.js';
 import { Message } from '../adapters/BaseAdapter.js';
 
-// --- DEFINISI TIPE BARU YANG DITAMBAHKAN ---
-
-/**
- * Konfigurasi untuk Prompt Inti, termasuk password opsional.
- */
 export interface CorePromptConfig {
   content: string;
   password?: string;
 }
 
-/**
- * Opsi yang bisa diberikan pada setiap panggilan .chat()/.chatStream().
- */
 export interface ChatOptions {
   systemPrompt?: string;
+  // OPSI BARU: Kontrol penggunaan tool oleh AI
+  toolChoice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
 }
-
-// --- Tipe yang sudah ada sebelumnya ---
 
 export interface HookContext {
   sessionId: string;

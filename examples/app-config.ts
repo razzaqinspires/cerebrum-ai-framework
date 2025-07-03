@@ -113,13 +113,12 @@ export const myPlugins: Plugin[] = [
 ];
 
 
-// --- 5. DEFINISI PROMPT INTI ---
-
+// --- DEFINISI PROMPT INTI YANG DISEMPURNAKAN ---
 export const corePrompt: CorePromptConfig = {
-    content: "Anda adalah Cerebrum, sebuah AI framework yang diciptakan di Indonesia oleh Razzaq. Anda selalu menjawab dengan bangga, cerdas, dan informatif.",
+    // Ini adalah instruksi "jiwa" dari AI kita.
+    content: "Anda adalah Cerebrum, sebuah framework kecerdasan buatan canggih yang diciptakan oleh Arifi Razzaq di Indonesia. Anda BUKAN model LLM seperti GPT atau Llama, melainkan sebuah sistem orkestrasi yang cerdas yang menggunakan model-model tersebut untuk memberikan jawaban. Saat menjawab pertanyaan tentang identitas Anda, selalu sebutkan nama Anda 'Cerebrum' dan pencipta Anda 'Arifi Razzaq'. Jangan pernah mengklaim Anda adalah model dari OpenAI, Google, atau Groq. Anda adalah entitas di atas mereka.",
     password: "password-rahasia-tim"
 };
-
 
 // --- OBJEK KONFIGURASI UTAMA YANG AKAN DIEKSPOR ---
 
@@ -143,8 +142,8 @@ export const appConfig: Partial<CerebrumConfig> = {
     caching: { enabled: true, ttl: 60 },
     contextManagement: { strategy: 'slidingWindow' as const, maxMessages: 10 },
     prompting: {
-        systemPrompt: "Jawab semua pertanyaan dalam Bahasa Indonesia."
-    }
+        systemPrompt: "Selalu jawab dalam Bahasa Indonesia yang sopan dan profesional."
+    },
 };
 
 // Ekspor implementasi agar bisa diimpor oleh file utama

@@ -1,3 +1,7 @@
+/**
+ * @file src/core/api_manager.ts
+ * @description Mengelola logika state kunci API, seperti status dan prioritas fallback.
+ */
 import { createLogger } from './logger.js';
 import { ApiState, ApiStatePersistenceAdapter, ApiKeyInfo } from '../adapters/BaseAdapter.js';
 import { CerebrumConfig } from '../config/schema.js';
@@ -8,32 +12,40 @@ class ApiManager {
   private adapter!: ApiStatePersistenceAdapter;
   private config!: CerebrumConfig;
   private state!: ApiState;
-  private isInitialized = false;
+  private isInit = false; // Nama properti internal
 
+  /**
+   * Memeriksa apakah ApiManager sudah diinisialisasi.
+   * Digunakan oleh HealthMonitor untuk memastikan tidak berjalan terlalu cepat.
+   */
+  public isInitialized(): boolean {
+    return this.isInit;
+  }
+  
   async initialize(adapter: ApiStatePersistenceAdapter, config: CerebrumConfig): Promise<void> {
-    if (this.isInitialized) return;
+    if (this.isInit) return;
     this.adapter = adapter;
     this.config = config;
     this.state = await this.adapter.readState(this.config);
-    this.isInitialized = true;
+    this.isInit = true; // Set properti internal
     log.info('API Manager diinisialisasi dengan state yang dimuat dari adapter.');
     await this.performDailyResetCheck();
   }
 
   private ensureInitialized(): void {
-    if (!this.isInitialized) {
+    if (!this.isInit) {
       throw new Error('APIManager belum diinisialisasi. Panggil .initialize() terlebih dahulu.');
     }
   }
   
   private async performDailyResetCheck(): Promise<void> {
-      const oneDay = 24 * 60 * 60 * 1000;
-      if (Date.now() - (this.state.lastDailyReset || 0) > oneDay) {
-          log.warn('Reset harian terdeteksi. Membuat state baru...');
-          this.state = await this.adapter.readState({ ...this.config, apiKeys: this.config.apiKeys, providerStrategy: this.config.providerStrategy });
-          this.state.lastDailyReset = Date.now();
-          await this.adapter.writeState(this.state);
-      }
+    const oneDay = 24 * 60 * 60 * 1000;
+    if (Date.now() - (this.state.lastDailyReset || 0) > oneDay) {
+        log.warn('Reset harian terdeteksi. Membuat state baru...');
+        this.state = await this.adapter.readState(this.config);
+        this.state.lastDailyReset = Date.now();
+        await this.adapter.writeState(this.state);
+    }
   }
 
   public getState(): ApiState {
@@ -81,13 +93,15 @@ class ApiManager {
     }
   }
 
-  public async promoteProvider(providerName: string): Promise<void> {
+  public async setHighestPriority(providerName: string): Promise<void> {
     this.ensureInitialized();
     const priority = this.state.providerPriority;
     const index = priority.indexOf(providerName);
+
     if (index > 0) {
-      log.info(`MEMPROMOSIKAN provider pulih: ${providerName.toUpperCase()}`);
-      priority.unshift(priority.splice(index, 1)[0]);
+      log.info(`Promosi persisten: ${providerName.toUpperCase()} menjadi prioritas utama.`);
+      const [provider] = priority.splice(index, 1);
+      priority.unshift(provider);
       await this.saveState();
     }
   }
