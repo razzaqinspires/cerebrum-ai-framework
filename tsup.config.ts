@@ -2,9 +2,11 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/index.ts', 'examples/final_chat_example.ts'],
-  format: ['esm', 'cjs'], // <--- UBAH BARIS INI
+  entry: ['src/index.ts'], // Hanya build library, bukan contoh
+  format: ['esm'], // <-- HANYA BUAT ESM
   dts: true,
   clean: true,
   sourcemap: true,
+  splitting: false, // <-- Jadikan satu file agar lebih sederhana
+  minify: false,
 });
