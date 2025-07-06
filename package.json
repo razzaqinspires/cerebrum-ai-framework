@@ -2,28 +2,15 @@
   "name": "cerebrum-ai-framework",
   "version": "1.2.3",
   "description": "A resilient and extensible framework for multiple LLM providers with streaming, tool-calling, and caching capabilities.",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.cjs"
-      }
-    }
-  },
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "tsup",
-    "start": "npm run build && node dist/examples/final_chat_example.js",
     "dev": "tsx examples/final_chat_example.ts",
     "watch": "tsx watch examples/final_chat_example.ts"
   },
@@ -31,24 +18,12 @@
     "type": "git",
     "url": "git+https://github.com/razzaqinspires/cerebrum-ai-framework.git"
   },
-  "keywords": [
-    "llm",
-    "ai",
-    "gateway",
-    "framework",
-    "agent",
-    "openai",
-    "gemini",
-    "groq",
-    "chatbot"
-  ],
-  "author": "Razzaq",
+  "keywords": [ "llm", "ai", "gateway", "framework", "agent", "openai", "gemini", "groq", "chatbot" ],
+  "author": "Arifi Razzaq",
   "license": "ISC",
   "dependencies": {
     "axios": "^1.7.2",
     "chalk": "^5.3.0",
-    "dotenv": "^16.4.5",
-    "gpt-3-encoder": "^1.1.4",
     "winston": "^3.13.0",
     "zod": "^3.23.8",
     "zod-to-json-schema": "^3.23.0"
