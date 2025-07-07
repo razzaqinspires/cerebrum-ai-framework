@@ -1,18 +1,14 @@
-// tsup.config.ts
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
   entry: ['src/index.ts'],
-  format: ['esm', 'cjs'],
-  dts: true,
-  clean: true,
-  sourcemap: true,
+  format: ['esm'], // <-- HANYA BUAT format ES Module
+  dts: true,       // Tetap buat file definisi tipe
   splitting: false,
-  minify: false,
-  platform: 'node',
-  // --- PERUBAHAN PALING PENTING ADA DI SINI ---
-  // Baris ini memberitahu tsup: "Jangan gabungkan paket-paket dari node_modules
-  // ke dalam hasil build. Biarkan mereka sebagai 'import' atau 'require' biasa."
-  noExternal: [],
-  external: ['gpt-3-encoder', '@xenova/transformers'], // Daftarkan paket yang menyebabkan masalah
+  sourcemap: true,
+  clean: true,
+  // Baris ini memberitahu tsup untuk tidak mengutak-atik dependensi
+  // Biarkan Node.js yang menanganinya saat runtime.
+  noExternal: [], 
+  external: ['@xenova/transformers', 'gpt-3-encoder']
 });
