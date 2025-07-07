@@ -2,33 +2,31 @@
   "name": "cerebrum-ai-framework",
   "version": "1.3.1",
   "description": "A resilient and extensible framework for multiple LLM providers.",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
-  "files": [
-    "dist"
-  ],
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [ "dist" ],
   "scripts": {
     "build": "tsup",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/razzaqinspires/cerebrum-ai-framework.git"
-  },
-  "keywords": [
-    "llm",
-    "ai",
-    "gateway",
-    "framework",
-    "agent"
-  ],
-  "author": "Arifi Razzaq",
-  "license": "ISC",
   "dependencies": {
     "axios": "^1.7.2",
     "chalk": "^5.3.0",
+    "gpt-3-encoder": "^1.1.4",
     "winston": "^3.13.0",
     "zod": "^3.23.8",
     "zod-to-json-schema": "^3.23.0"
