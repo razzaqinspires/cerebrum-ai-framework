@@ -9,5 +9,10 @@ export default defineConfig({
   sourcemap: true,
   splitting: false,
   minify: false,
-  platform: 'node', // <-- TAMBAHKAN BARIS INI
+  platform: 'node',
+  // --- PERUBAHAN PALING PENTING ADA DI SINI ---
+  // Baris ini memberitahu tsup: "Jangan gabungkan paket-paket dari node_modules
+  // ke dalam hasil build. Biarkan mereka sebagai 'import' atau 'require' biasa."
+  noExternal: [],
+  external: ['gpt-3-encoder', '@xenova/transformers'], // Daftarkan paket yang menyebabkan masalah
 });
