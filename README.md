@@ -46,6 +46,44 @@ Tabel ini menunjukkan status implementasi dari fitur-fitur utama Cerebrum.
 * **⚙️ Sistem Plugin & Middleware:** "Suntikkan" logika kustom pada berbagai tahap siklus hidup permintaan untuk analitik, moderasi, dll.
 * **📦 Dukungan Modul Ganda:** Bekerja secara *out-of-the-box* baik dengan proyek **ES Modules (`import`)** maupun **CommonJS (`require`)**.
 
+## Ecosystem Visualization
+
+```mermaid
+graph LR
+  Cerebrum["🧠 Cerebrum Core"] -->|Integrasi| ProviderHub["🌐 Provider Hub"]
+  Cerebrum -->|Ekstensi| Plugins["🔌 Plugin System"]
+  Cerebrum -->|Aksi| Tooling["⚙️ Tool Orchestrator"]
+  Cerebrum -->|Data| Memory["💾 Memory & Cache"]
+  Cerebrum -->|Output| Streamer["📡 Stream Engine"]
+  Plugins -->|Observasi| Analytics["📊 Analytics/Telemetry"]
+  Tooling -->|Akses| APIs["🌍 External APIs"]
+```
+
+![Made with TypeScript](https://img.shields.io/badge/Made_with-TypeScript-2f74c0?style=for-the-badge&logo=typescript)
+![AI Native](https://img.shields.io/badge/AI-Native_Architecture-6a1b9a?style=for-the-badge&logo=openai)
+![Neural Adaptive](https://img.shields.io/badge/Adaptive%20Core-NeuroDesign-00bfa6?style=for-the-badge)
+
+<div align="center">
+
+💠──────────────────────────────💠  
+**“One Framework. Infinite Minds.”**  
+💠──────────────────────────────💠
+
+</div>
+
+## Neural Core - Schema
+
+```mermaid
+graph TD
+  Cortex["🧩 Cerebrum Cortex"] -->|Thought Stream| Analyzer["🧮 Evaluator Unit"]
+  Cortex -->|Plugin Hooks| Synapses["⚡ Synaptic Middleware"]
+  Cortex -->|Tool Signals| Executor["🔧 Tool Executor"]
+  Analyzer -->|Feedback| Memory["💾 Memory Core"]
+  Memory -->|Recall| Cortex
+  Memory -->|Cache| Stream["📡 Stream Gateway"]
+  Stream -->|Deliver| Output["🧍 User/Client"]
+```
+
 ## Diagram Alur Kerja (Algoritma)
 
 ```mermaid
@@ -356,6 +394,15 @@ Jika Anda merasa Cerebrum membantu pekerjaan Anda dan ingin memberikan apresiasi
 <a href="https://saweria.co/arzzq" target="_blank" rel="noopener noreferrer">
   <img src="https://user-images.githubusercontent.com/24271830/224734823-3883d6c5-ab74-4348-8442-5339f46bT098.png" alt="Dukung di Saweria" width="200">
 </a>
+
+---
+
+## 🧬 Codename & Lore
+
+> “Cerebrum” berasal dari lapisan luar otak manusia — tempat logika, imajinasi, dan kesadaran lahir.  
+Versi pertama framework ini, *Project Synapse*, diciptakan untuk menjembatani AI API seperti neuron-neuron yang saling terhubung.  
+
+Nama *Cerebrum* dipilih karena ia tidak hanya memproses, tetapi juga **beradaptasi** dan **menyembuhkan dirinya sendiri**.
 
 ---
 
