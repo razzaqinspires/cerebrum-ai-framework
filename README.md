@@ -50,22 +50,73 @@ Tabel ini menunjukkan status implementasi dari fitur-fitur utama Cerebrum.
 
 ```mermaid
 graph TD
-    A[Input Pengguna] --> B{Cerebrum.chatStream()};
-    B --> C{Cache Check};
-    C -- CACHE HIT --> D[Stream dari Cache];
-    C -- CACHE MISS --> E[Responder];
-    E --> F{Provider #1};
-    F -- Gagal --> G{Provider #2};
-    F -- Sukses --> H[API LLM];
-    G -- Sukses --> H;
-    H --> I{Perlu Tool?};
-    I -- YA --> J[Jalankan Tool Lokal];
-    J --> K[Kirim Hasil ke AI];
-    K --> H;
-    I -- TIDAK --> L[Stream Teks dari AI];
-    L --> M{Simpan ke Cache & Memori};
-    D --> Z[Selesai];
-    M --> Z;
+    %%==========================================================
+    %% CORE FLOW : THE CEREBRUM AI MULTI-LAYER INTELLIGENCE MAP
+    %%==========================================================
+    A0([🧠 Input Pengguna]) -->|Prompt Masuk| B0{🌀 Cerebrum.chatStream() Core};
+    
+    %% 1. PREPROCESSING
+    B0 --> B1[🔍 Input Normalizer\n(NLP Cleaner + Contextual Reconstructor)];
+    B1 --> B2{⚙️ Context Fusion Layer\n(Ambil Konteks dari Memory Pool + Cache)};
+    
+    %% 2. CACHE SYSTEM
+    B2 -->|Cek| C1{🧩 Cache Check Quantum};
+    C1 -- CACHE HIT --> D1[⚡ Stream dari HyperCache];
+    C1 -- CACHE MISS --> E1[🌐 Multi-Responder Mesh];
+    
+    %% 3. RESPONDER MESH
+    E1 --> F1[🧩 Provider #1 (Primary Cortex API)];
+    E1 --> F2[🧩 Provider #2 (Backup Neural Node)];
+    E1 --> F3[🧩 Provider #3 (Experimental Model Sandbox)];
+    
+    %% 4. PROVIDER ROUTING LOGIC
+    F1 -->|Success| H1[🧭 Unified LLM Interface];
+    F1 -->|Fail| F2;
+    F2 -->|Fail| F3;
+    F2 -->|Success| H1;
+    F3 -->|Success| H1;
+    F3 -->|Fail| X1([❌ Fallback Emergency Core]);
+    
+    %% 5. AI CORE LOGIC
+    H1 --> I1{🤔 Perlu Tool / Eksekusi Lokal?};
+    I1 -- YA --> J1[🧰 Tool Orchestrator Hub];
+    I1 -- TIDAK --> L1[💬 AI Stream Generator];
+    
+    %% 6. TOOL EXECUTION
+    J1 --> J2[🧩 Adaptive Tool Selector\n(Auto-pilih Node Lokal)];
+    J2 --> J3{🔧 Tool Executor (Local/Remote Hybrid)};
+    J3 --> K1[📡 Kirim Output ke AI Core];
+    K1 --> H1;
+    
+    %% 7. TEXT STREAMING
+    L1 --> M1[🧬 Thought Stream Synthesizer];
+    M1 --> M2{🧠 Evaluasi & Refinement Pass};
+    M2 -->|Revisi| L1;
+    M2 -->|Final| N1[📤 Stream ke Pengguna (Dynamic Flow)];
+    
+    %% 8. MEMORY + CACHE
+    N1 --> M3[💾 Cache & Memory Integrator];
+    M3 --> M4[🧠 Long-Term Memory Store\n(Semantic Vector + Emotional Layer)];
+    D1 --> Z1([✅ Selesai & Stream Final]);
+    M4 --> Z1;
+    
+    %% 9. FEEDBACK LOOP (SELF-EVOLVING)
+    Z1 --> FBL1{🔁 Feedback Analysis Engine};
+    FBL1 --> FBL2[📊 Quality Scoring + Hallucination Filter];
+    FBL2 --> FBL3[🧩 Model Recalibration Unit];
+    FBL3 --> B0; %% Self-Optimizing Loop
+    
+    %%==========================================================
+    %% VISUAL STYLING
+    %%==========================================================
+    classDef core fill=#212b36,stroke=#00ffc6,stroke-width:2px,color=#e0fffa,font-weight:bold;
+    classDef process fill=#1b1f22,stroke=#00b4ff,stroke-width:1.5px,color=#f0ffff;
+    classDef decision fill=#111827,stroke=#ff7b00,stroke-width:2px,color=#fff3e6,font-weight:bold;
+    classDef terminal fill=#002b36,stroke=#00ff88,stroke-width:3px,color=#aaffdd,font-weight:bold;
+    
+    class A0,Z1,X1 terminal;
+    class B0,B1,B2,E1,F1,F2,F3,H1,J1,J2,J3,L1,M1,M3,M4 process;
+    class C1,I1,M2,FBL1,FBL2,FBL3 decision;
 ```
 
 ## 🚀 Instalasi
