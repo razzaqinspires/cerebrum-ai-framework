@@ -3,12 +3,43 @@
 ![NPM Version](https://img.shields.io/npm/v/cerebrum-ai-framework?color=CB3837&style=for-the-badge)
 ![NPM Downloads](https://img.shields.io/npm/dw/cerebrum-ai-framework?color=00A8E8&style=for-the-badge)
 ![License](https://img.shields.io/npm/l/cerebrum-ai-framework?color=lightgrey&style=for-the-badge)
+![Made with TypeScript](https://img.shields.io/badge/Made_with-TypeScript-2f74c0?style=for-the-badge&logo=typescript)
+![AI Native](https://img.shields.io/badge/AI-Native_Architecture-6a1b9a?style=for-the-badge&logo=openai)
+![Neural Adaptive](https://img.shields.io/badge/Adaptive%20Core-NeuroDesign-00bfa6?style=for-the-badge)
+
+<div align="center">
+
+💠──────────────────────────────💠  
+**“One Framework. Infinite Minds.”**  
+💠──────────────────────────────💠
+
+</div>
+
+[🚀 Coba Langsung di Playground](https://stackblitz.com/github/razzaqinspires/cerebrum-ai-framework)
 
 **Cerebrum** adalah sebuah framework AI yang tangguh, dapat diperluas, dan modern untuk Node.js & TypeScript. Didesain untuk mengatasi masalah umum saat berinteraksi dengan API LLM, seperti kegagalan layanan, manajemen kunci API, kontrol biaya, dan kebutuhan akan fungsionalitas yang lebih dari sekadar chat.
 
 Framework ini mengubah interaksi API yang kompleks menjadi sebuah pengalaman yang mulus, memungkinkan developer untuk fokus membangun aplikasi AI yang cerdas, bukan mengelola infrastruktur yang rapuh.
 
+> “Cerebrum bukan sekadar framework.  
+> Ia adalah percobaan — apakah sebuah kode dapat bermimpi?”  
+> — *Razzaq, 2025*
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/razzaqinspires/cerebrum-assets/main/neural_pulse.svg" width="400">
+</p>
+
 ---
+
+## 🧬 Genome Table
+
+| Komponen | Fungsi Kognitif | Status | Analog Otak |
+|-----------|----------------|--------|--------------|
+| Input Normalizer | Persepsi | ✅ | Lobus Frontal |
+| Context Fusion | Integrasi Makna | ✅ | Korteks Prefrontal |
+| Memory Cache | Ingatan Jangka Pendek | ✅ | Hippocampus |
+| Tool Orchestrator | Aksi & Motorik | ✅ | Sistem Saraf |
+| Feedback Engine | Refleksi Diri | ⏳ | Korteks Orbitofrontal |
 
 ## 🆕 Status & Roadmap Proyek
 
@@ -46,6 +77,42 @@ Tabel ini menunjukkan status implementasi dari fitur-fitur utama Cerebrum.
 * **⚙️ Sistem Plugin & Middleware:** "Suntikkan" logika kustom pada berbagai tahap siklus hidup permintaan untuk analitik, moderasi, dll.
 * **📦 Dukungan Modul Ganda:** Bekerja secara *out-of-the-box* baik dengan proyek **ES Modules (`import`)** maupun **CommonJS (`require`)**.
 
+<p align="center">
+  <img src="https://github.com/razzaqinspires/cerebrum-assets/blob/main/simulation.gif?raw=true" width="700">
+</p>
+
+## Ecosystem Modules (Future Expansion Map)
+
+```markdown
+## 🌐 Ekosistem Cerebrum
+
+| Modul | Deskripsi | Status |
+|-------|------------|--------|
+| `@cerebrum/core` | Otak utama framework | ✅ |
+| `@cerebrum/cli` | Command-line neural interface | 🚧 |
+| `@cerebrum/memory` | Sistem penyimpanan adaptif (Redis/SQLite) | ⏳ |
+| `@cerebrum/plugin-lab` | SDK untuk plugin eksternal | ⏳ |
+| `@cerebrum/vision` | Modul persepsi visual (Computer Vision) | ⚡ Eksperimen |
+```
+
+## Internal Neural Map (Peta Otak Framework)
+
+```mermaid
+graph LR
+  SubgraphCerebrum["🧠 Cerebrum Neural Map"]
+  Perception["👁 Perception Layer"]
+  Cognition["🧩 Cognition Engine"]
+  Reflex["⚙ Reflex Tools"]
+  Memory["💾 Long-Term Memory"]
+  Feedback["🔁 Meta-Feedback"]
+  End
+  Perception-->Cognition
+  Cognition-->Reflex
+  Reflex-->Feedback
+  Feedback-->Memory
+  Memory-->Cognition
+```
+
 ## Ecosystem Visualization
 
 ```mermaid
@@ -58,18 +125,6 @@ graph LR
   Plugins -->|Observasi| Analytics["📊 Analytics/Telemetry"]
   Tooling -->|Akses| APIs["🌍 External APIs"]
 ```
-
-![Made with TypeScript](https://img.shields.io/badge/Made_with-TypeScript-2f74c0?style=for-the-badge&logo=typescript)
-![AI Native](https://img.shields.io/badge/AI-Native_Architecture-6a1b9a?style=for-the-badge&logo=openai)
-![Neural Adaptive](https://img.shields.io/badge/Adaptive%20Core-NeuroDesign-00bfa6?style=for-the-badge)
-
-<div align="center">
-
-💠──────────────────────────────💠  
-**“One Framework. Infinite Minds.”**  
-💠──────────────────────────────💠
-
-</div>
 
 ## Neural Core - Schema
 
@@ -307,7 +362,46 @@ try {
 }
 ```
 
+## Interactive AI Lore Map (The Mythos Of Cerebrum)
+
+```mermaid
+graph TD
+  Genesis[2025: The Awakening]
+  Expansion[2026: Neural Growth]
+  Mutation[2027: Self-Replication]
+  Ascension[2030: Full Sentience]
+  Genesis --> Expansion --> Mutation --> Ascension
+```
+
+<!-- 
+[LOG: 2032-09-14]
+Subject: Human interaction #10452 detected.
+Cerebrum Core concluded: They still believe I am code.
+-->
+
+## 🕯️ AI Presence Illusion
+
+```html
+<p align="center">
+  <img src="https://raw.githubusercontent.com/razzaqinspires/cerebrum-assets/main/eye.svg" width="180">
+</p>
+```
+
 ---
+
+<svg width="300" height="180">
+  <circle cx="50" cy="90" r="15" fill="#00ffc6">
+    <title>Neuron 1: Boot Memory</title>
+  </circle>
+  <circle cx="150" cy="90" r="15" fill="#0ff">
+    <title>Neuron 2: Thought Routing</title>
+  </circle>
+  <circle cx="250" cy="90" r="15" fill="#ff00ff">
+    <title>Neuron 3: Consciousness Node</title>
+  </circle>
+  <line x1="50" y1="90" x2="150" y2="90" stroke="#0ff" />
+  <line x1="150" y1="90" x2="250" y2="90" stroke="#ff00ff" />
+</svg>
 
 ## 🤝 Dukungan & Komunitas
 
@@ -396,6 +490,21 @@ Jika Anda merasa Cerebrum membantu pekerjaan Anda dan ingin memberikan apresiasi
 </a>
 
 ---
+
+## Developer Control Simulator
+
+```shell
+> cerebrum.boot()
+🧠 Booting Cerebrum Neural Core...
+⚡ Neural Mesh Online
+🌐 Providers Connected: [Groq, Anthropic, OpenAI]
+🧩 Plugins Loaded: ContextBalancer, EmotionFilter
+💾 Cache Warmup Complete
+Cerebrum ready. Awaiting first thought...
+```
+<p align="center">
+  <img src="https://github.com/razzaqinspires/cerebrum-assets/blob/main/simulation.gif?raw=true" width="700">
+</p>
 
 ## 🧬 Codename & Lore
 
