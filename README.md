@@ -51,57 +51,57 @@ Tabel ini menunjukkan status implementasi dari fitur-fitur utama Cerebrum.
 ```mermaid
 graph TD
     %%================ CORE FLOW ================
-    A0([Input Pengguna]) -->|Prompt Masuk| B0{Cerebrum.chatStream Core};
+    A0(["Input Pengguna"]) -->|"Prompt Masuk"| B0{"Cerebrum.chatStream Core"};
 
     %% 1. PREPROCESSING
-    B0 --> B1[Input Normalizer (NLP Cleaner + Context Rebuilder)];
-    B1 --> B2{Context Fusion Layer (Memory Pool and Cache Integration)};
+    B0 --> B1["Input Normalizer (NLP Cleaner dan Context Rebuilder)"];
+    B1 --> B2{"Context Fusion Layer (Memory Pool dan Cache Integration)"};
 
     %% 2. CACHE SYSTEM
-    B2 -->|Cek| C1{Cache Quantum Check};
-    C1 -- CACHE HIT --> D1[Stream dari HyperCache];
-    C1 -- CACHE MISS --> E1[Multi-Responder Mesh];
+    B2 -->|"Cek"| C1{"Cache Quantum Check"};
+    C1 -- "CACHE HIT" --> D1["Stream dari HyperCache"];
+    C1 -- "CACHE MISS" --> E1["Multi-Responder Mesh"];
 
     %% 3. RESPONDER MESH
-    E1 --> F1[Provider 1 Primary Cortex API];
-    E1 --> F2[Provider 2 Backup Neural Node];
-    E1 --> F3[Provider 3 Experimental Sandbox];
+    E1 --> F1["Provider 1 - Primary Cortex API"];
+    E1 --> F2["Provider 2 - Backup Neural Node"];
+    E1 --> F3["Provider 3 - Experimental Sandbox"];
 
     %% 4. PROVIDER ROUTING LOGIC
-    F1 -->|Success| H1[Unified LLM Interface];
-    F1 -->|Fail| F2;
-    F2 -->|Fail| F3;
-    F2 -->|Success| H1;
-    F3 -->|Success| H1;
-    F3 -->|Fail| X1([Fallback Emergency Core]);
+    F1 -->|"Success"| H1["Unified LLM Interface"];
+    F1 -->|"Fail"| F2;
+    F2 -->|"Fail"| F3;
+    F2 -->|"Success"| H1;
+    F3 -->|"Success"| H1;
+    F3 -->|"Fail"| X1(["Fallback Emergency Core"]);
 
     %% 5. AI CORE LOGIC
-    H1 --> I1{Perlu Tool atau Eksekusi Lokal};
-    I1 -- YA --> J1[Tool Orchestrator Hub];
-    I1 -- TIDAK --> L1[AI Stream Generator];
+    H1 --> I1{"Perlu Tool atau Eksekusi Lokal?"};
+    I1 -- "YA" --> J1["Tool Orchestrator Hub"];
+    I1 -- "TIDAK" --> L1["AI Stream Generator"];
 
     %% 6. TOOL EXECUTION
-    J1 --> J2[Adaptive Tool Selector Local or Remote];
-    J2 --> J3{Tool Executor};
-    J3 --> K1[Kirim Output ke AI Core];
+    J1 --> J2["Adaptive Tool Selector (Local atau Remote)"];
+    J2 --> J3{"Tool Executor"};
+    J3 --> K1["Kirim Output ke AI Core"];
     K1 --> H1;
 
     %% 7. TEXT STREAMING
-    L1 --> M1[Thought Stream Synthesizer];
-    M1 --> M2{Evaluasi dan Refinement Pass};
-    M2 -->|Revisi| L1;
-    M2 -->|Final| N1[Stream ke Pengguna];
+    L1 --> M1["Thought Stream Synthesizer"];
+    M1 --> M2{"Evaluasi dan Refinement Pass"};
+    M2 -->|"Revisi"| L1;
+    M2 -->|"Final"| N1["Stream ke Pengguna"];
 
     %% 8. MEMORY + CACHE
-    N1 --> M3[Cache dan Memory Integrator];
-    M3 --> M4[Long Term Memory Store Semantic Vector and Emotional Layer];
-    D1 --> Z1([Selesai dan Stream Final]);
+    N1 --> M3["Cache dan Memory Integrator"];
+    M3 --> M4["Long Term Memory Store (Semantic Vector dan Emotional Layer)"];
+    D1 --> Z1(["Selesai dan Stream Final"]);
     M4 --> Z1;
 
     %% 9. FEEDBACK LOOP
-    Z1 --> FBL1{Feedback Analysis Engine};
-    FBL1 --> FBL2[Quality Scoring and Hallucination Filter];
-    FBL2 --> FBL3[Model Recalibration Unit];
+    Z1 --> FBL1{"Feedback Analysis Engine"};
+    FBL1 --> FBL2["Quality Scoring dan Hallucination Filter"];
+    FBL2 --> FBL3["Model Recalibration Unit"];
     FBL3 --> B0;
 
     %%================ STYLING ==================
@@ -245,6 +245,75 @@ const appConfig = {
 ## 💡 Pola Penggunaan & Skenario Lanjutan
 
 * **Chatbot Layanan Pelanggan:** Gunakan `contextManagement: { strategy: 'tokenLimit' }` untuk mengelola tiket support yang panjang dan `tools` untuk mengambil data pesanan.
+* **Generator Konten:** Aktifkan `caching: { enabled: true, ttl: 3600 }` untuk menghemat biaya pada topik yang sering diminta. Gunakan `options.systemPrompt` untuk mengarahkan gaya penulisan AI per artikel.
+* **Bot Interaktif Real-time (Discord/Telegram):** Manfaatkan penuh loop `for await...of` pada `cerebrum.chatStream()` dan event `chunk` untuk menciptakan ilusi AI sedang "mengetik" dengan mengedit pesan secara bertahap.
+
+---
+
+## 📚 API Referensi & Konsep Inti
+
+Bagian ini untuk developer yang ingin memahami arsitektur Cerebrum lebih dalam.
+
+### `Cerebrum` (Kelas Utama)
+Titik masuk utama dari framework.
+
+* **`new Cerebrum(config, toolImplementations?, plugins?, corePromptConfig?)`**: Konstruktor untuk membuat instance baru dengan konfigurasi eksplisit.
+* **`.bootstrap(): Promise<void>`**: Wajib dipanggil sekali untuk memuat state dan menjalankan layanan latar belakang.
+* **`.chatStream(sessionId, userInput, options?): AsyncGenerator<ChatStreamEvent>`**: Metode utama untuk memulai percakapan, mengembalikan *Async Generator* yang bisa di-loop untuk menerima event (`chunk`, `tool_call`, dll) secara real-time.
+
+### Tipe & Interface yang Dapat Diimpor
+Gunakan tipe-tipe ini untuk memastikan kode Anda *type-safe*.
+
+* `ToolDefinition`: Objek untuk mendefinisikan tool (`name`, `description`, `parameters` via Zod).
+* `Plugin`: Objek berisi metode *hook* (`onPreChat`, `onChatComplete`, dll) untuk memperluas fungsionalitas.
+* `ChatStreamEvent`: Objek yang di-`yield` oleh `.chatStream()`. Memiliki `type` dan `content`.
+* `CorePromptConfig`: Objek `{ content: string, password?: string }` untuk identitas dasar AI.
+* `ChatOptions`: Objek `{ systemPrompt?: string }` untuk dikirim per permintaan.
+
+### Penanganan Error
+Cerebrum melempar kelas error kustom agar Anda bisa menangani kegagalan dengan spesifik.
+
+```typescript
+import { Cerebrum, AllProvidersFailedError, ConfigError } from 'cerebrum-ai-framework';
+
+try {
+    const cerebrum = new Cerebrum(...);
+    await cerebrum.chatStream(...);
+} catch (error) {
+    if (error instanceof ConfigError) {
+        console.error("Konfigurasi salah:", error.message);
+    } else if (error instanceof AllProvidersFailedError) {
+        console.error("Layanan AI sedang sibuk, coba lagi nanti.");
+        console.log("Penyebab terakhir:", error.lastError);
+    }
+}
+```
+
+---
+
+## 🤝 Dukungan & Komunitas
+
+Proyek ini dibuat dan dipelihara oleh **Razzaq.** Terhubunglah dengan saya!
+
+* **⭐ Follow di GitHub:** [**razzaqinspires**](https://github.com/razzaqinspires)
+* **📸 Ikuti di Instagram:** [**@ar.zzq**](https://www.instagram.com/ar.zzq)
+
+Merasa framework ini bermanfaat? Punya ide atau ingin berkontribusi? Jangan ragu untuk membuat *issue* atau *pull request* di repository GitHub.
+
+## ❤️ Dukung Proyek Ini
+
+Jika Anda merasa Cerebrum membantu pekerjaan Anda dan ingin memberikan apresiasi, Anda bisa mendukung saya melalui Saweria. Setiap dukungan sangat berarti dan membantu saya untuk terus mengembangkan proyek open-source yang bermanfaat.
+
+<a href="https://saweria.co/arzzq" target="_blank" rel="noopener noreferrer">
+  <img src="https://user-images.githubusercontent.com/24271830/224734823-3883d6c5-ab74-4348-8442-5339f46bT098.png" alt="Dukung di Saweria" width="200">
+</a>
+
+---
+
+## 📜 Lisensi
+
+Proyek ini dilisensikan di bawah **MIT License**.
+Chatbot Layanan Pelanggan:** Gunakan `contextManagement: { strategy: 'tokenLimit' }` untuk mengelola tiket support yang panjang dan `tools` untuk mengambil data pesanan.
 * **Generator Konten:** Aktifkan `caching: { enabled: true, ttl: 3600 }` untuk menghemat biaya pada topik yang sering diminta. Gunakan `options.systemPrompt` untuk mengarahkan gaya penulisan AI per artikel.
 * **Bot Interaktif Real-time (Discord/Telegram):** Manfaatkan penuh loop `for await...of` pada `cerebrum.chatStream()` dan event `chunk` untuk menciptakan ilusi AI sedang "mengetik" dengan mengedit pesan secara bertahap.
 
